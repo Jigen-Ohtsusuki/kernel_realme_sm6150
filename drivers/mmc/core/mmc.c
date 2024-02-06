@@ -1031,13 +1031,15 @@ static void mmc_set_bus_speed(struct mmc_card *card)
 static int mmc_select_bus_width(struct mmc_card *card)
 {
 	static const unsigned int ext_csd_bits[] = {
-		EXT_CSD_BUS_WIDTH_8,
-		EXT_CSD_BUS_WIDTH_4,
-	};
-	static const unsigned int bus_widths[] = {
-		MMC_BUS_WIDTH_8,
-		MMC_BUS_WIDTH_4,
-	};
+        EXT_CSD_BUS_WIDTH_8,
+        EXT_CSD_BUS_WIDTH_4,
+        EXT_CSD_BUS_WIDTH_1,
+    };
+    static const unsigned int bus_widths[] = {
+        MMC_BUS_WIDTH_8,
+        MMC_BUS_WIDTH_4,
+        MMC_BUS_WIDTH_1,
+    };
 	struct mmc_host *host = card->host;
 	unsigned int idx, bus_width = 0;
 	int err = 0;
