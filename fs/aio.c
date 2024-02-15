@@ -1126,6 +1126,13 @@ static void aio_complete(struct kiocb *kiocb, long res, long res2)
 	if (!list_empty_careful(&iocb->ki_list)) {
 		unsigned long flags;
 
+	/*
+	 * kiocb didn't come from aio or is neither a read nor a write, hence
+	 * ignore it.
+	 */
+	if (!(iocb->ki_flags & IOCB_AIO_RW))
+		return;
+	
 		spin_lock_irqsave(&ctx->ctx_lock, flags);
 		list_del(&iocb->ki_list);
 		spin_unlock_irqrestore(&ctx->ctx_lock, flags);
@@ -1591,7 +1598,7 @@ static int io_submit_one(struct kioctx *ctx, struct iocb __user *user_iocb,
 	}
 	req->common.ki_pos = iocb->aio_offset;
 	req->common.ki_complete = aio_complete;
-	req->common.ki_flags = iocb_flags(req->common.ki_filp);
+	req->common.ki_flags = iocb_flags(req->common.ki_filp) | IOCB_AIO_RW;
 	req->common.ki_hint = file_write_hint(file);
 
 	if (iocb->aio_flags & IOCB_FLAG_RESFD) {
