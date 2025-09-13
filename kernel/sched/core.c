@@ -3182,7 +3182,6 @@ void scheduler_tick(void)
 	early_notif = early_detection_notify(rq, wallclock);
 	if (early_notif)
 		flag = SCHED_CPUFREQ_WALT | SCHED_CPUFREQ_EARLY_DET;
-
 	cpufreq_update_util(rq, flag);
 	rq_unlock(rq, &rf);
 
@@ -3550,6 +3549,7 @@ static void __sched notrace __schedule(bool preempt)
 		}
 		switch_count = &prev->nvcsw;
 	}
+
 
 	next = pick_next_task(rq, prev, &rf);
 	clear_tsk_need_resched(prev);
@@ -7662,3 +7662,9 @@ void sched_exit(struct task_struct *p)
 #endif /* CONFIG_SCHED_WALT */
 
 __read_mostly bool sched_predl = 1;
+#ifdef OPLUS_BUG_STABILITY
+struct task_struct *oppo_get_cpu_task(int cpu)
+{
+        return cpu_curr(cpu);
+}
+#endif
