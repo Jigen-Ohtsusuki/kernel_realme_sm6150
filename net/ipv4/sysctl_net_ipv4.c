@@ -1004,15 +1004,15 @@ static struct ctl_table ipv4_net_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec
 	},
-	+	{
-+		.procname	= "tcp_early_retrans",
-+		.data		= &init_net.ipv4.sysctl_tcp_early_retrans,
-+		.maxlen		= sizeof(int),
-+		.mode		= 0644,
-+		.proc_handler	= proc_dointvec_minmax,
-+		.extra1		= &zero,
-+		.extra2		= &four,
-+	},
+		{
+		.procname	= "tcp_early_retrans",
+		.data		= &init_net.ipv4.sysctl_tcp_early_retrans,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &four,
+	},
 #ifdef CONFIG_SYN_COOKIES
 	{
 		.procname	= "tcp_syncookies",
