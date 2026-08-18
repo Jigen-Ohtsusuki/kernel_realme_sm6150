@@ -4480,11 +4480,15 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_LP1 cmd, rc=%d\n",
 		       panel->name, rc);
-#ifdef OPLUS_BUG_STABILITY
 	//oppo_update_aod_light_mode_unlock(panel);
+	/* Android 16 transitions LP1 -> LP2 in rapid succession.
+	 * LP2 is the actual resting AOD state. Set the flag so the
+	 * backlight hook fires if a brightness update arrives at LP1,
+	 * but we will also handle LP2 explicitly below.
+	 */
 	panel->need_power_on_backlight = true;
 	set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE);
-#endif /* OPLUS_BUG_STABILITY */
+
 exit:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
@@ -4510,9 +4514,17 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_LP2 cmd, rc=%d\n",
 		       panel->name, rc);
-#ifdef OPLUS_BUG_STABILITY
 	set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE_SUSPEND);
-#endif /* OPLUS_BUG_STABILITY */
+
+	/* Android 16: LP2 is the actual resting AOD state. The panel is put
+	 * to sleep by the LP2 command sequence, so we must explicitly wake
+	 * the display here so the AOD clock is visible.
+	 */
+	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_POST_ON_BACKLIGHT);
+	if (rc)
+		pr_err("[%s] failed to send DSI_CMD_POST_ON_BACKLIGHT in lp2, rc=%d\n",
+		       panel->name, rc);
+
 exit:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
@@ -4547,9 +4559,8 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 		pr_err("[%s] failed to send DSI_CMD_SET_NOLP cmd, rc=%d\n",
 		       panel->name, rc);
 
-#ifdef OPLUS_BUG_STABILITY
 	set_oppo_display_power_status(OPPO_DISPLAY_POWER_ON);
-#endif /* OPLUS_BUG_STABILITY */
+
 exit:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
