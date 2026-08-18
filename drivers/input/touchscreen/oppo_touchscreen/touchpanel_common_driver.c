@@ -3800,13 +3800,15 @@ static const struct file_operations proc_touch_apk_fops = {
 static int tp_suspend(struct device *dev);
 static void tp_resume(struct device *dev);
 
+static int aod_dt2w_enable = 0;
+
 void oppo_tp_aod_suspend_status(int status)
 {
     if (!g_tp || !g_tp->dev) return;
     
     if (status == 1) {
-        if (!g_tp->is_suspended) {
-            TPD_INFO("%s: Suspending touchpanel for AOD\n", __func__);
+        if (!g_tp->is_suspended && aod_dt2w_enable) {
+            TPD_INFO("%s: Suspending touchpanel for AOD (AOD DT2W Enabled)\n", __func__);
             tp_suspend(g_tp->dev);
         }
     } else {
@@ -3844,6 +3846,7 @@ EXPORT_SYMBOL(oppo_tp_aod_suspend_status);
     };
 
 GESTURE_ATTR(double_tap, DouTap_enable);
+GESTURE_ATTR(aod_dt2w, aod_dt2w_enable);
 GESTURE_ATTR(up_arrow, UpVee_enable);
 GESTURE_ATTR(down_arrow, DownVee_enable);
 GESTURE_ATTR(left_arrow, LeftVee_enable);
@@ -3947,6 +3950,7 @@ static int init_touchpanel_proc(struct touchpanel_data *ts)
     //proc files-step2-4:/proc/touchpanel/double_tap_enable (black gesture related interface)
     if (ts->black_gesture_support) {
         CREATE_GESTURE_NODE(double_tap);
+        CREATE_GESTURE_NODE(aod_dt2w);
         CREATE_GESTURE_NODE(up_arrow);
         CREATE_GESTURE_NODE(down_arrow);
         CREATE_GESTURE_NODE(left_arrow);
