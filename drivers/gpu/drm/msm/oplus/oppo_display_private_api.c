@@ -2582,6 +2582,8 @@ int dsi_display_oppo_set_power(struct drm_connector *connector,
 			break;
 		case OPPO_DISPLAY_NORMAL_SCENE:
 		case OPPO_DISPLAY_NORMAL_HBM_SCENE:
+			extern void oppo_tp_aod_suspend_status(int status);
+			oppo_tp_aod_suspend_status(1);
 			rc = dsi_panel_set_lp1(display->panel);
 			rc = dsi_panel_set_lp2(display->panel);
 			set_oppo_display_scene(OPPO_DISPLAY_AOD_SCENE);

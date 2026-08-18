@@ -3797,6 +3797,26 @@ static const struct file_operations proc_touch_apk_fops = {
 };
 
 #endif //end of CONFIG_OPPO_TP_APK
+static int tp_suspend(struct device *dev);
+static void tp_resume(struct device *dev);
+
+void oppo_tp_aod_suspend_status(int status)
+{
+    if (!g_tp || !g_tp->dev) return;
+    
+    if (status == 1) {
+        if (!g_tp->is_suspended) {
+            TPD_INFO("%s: Suspending touchpanel for AOD\n", __func__);
+            tp_suspend(g_tp->dev);
+        }
+    } else {
+        if (g_tp->is_suspended) {
+            TPD_INFO("%s: Resuming touchpanel from AOD\n", __func__);
+            tp_resume(g_tp->dev);
+        }
+    }
+}
+EXPORT_SYMBOL(oppo_tp_aod_suspend_status);
 
 #define GESTURE_ATTR(name, out) \
     static ssize_t name##_enable_read_func(struct file *file, char __user *user_buf, size_t count, loff_t *ppos) \
