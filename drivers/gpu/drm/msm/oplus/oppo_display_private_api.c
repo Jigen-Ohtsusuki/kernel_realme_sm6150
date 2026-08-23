@@ -2622,6 +2622,11 @@ int dsi_display_oppo_set_power(struct drm_connector *connector,
 		blank = MSM_DRM_BLANK_UNBLANK;
 		notifier_data.data = &blank;
 		notifier_data.id = 0;
+
+		/* Android 16: Resume touchpanel from AOD mode */
+		extern void oppo_tp_aod_suspend_status(int status);
+		oppo_tp_aod_suspend_status(0);
+
 		msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
 					   &notifier_data);
 		if(OPPO_DISPLAY_AOD_SCENE == get_oppo_display_scene()) {
