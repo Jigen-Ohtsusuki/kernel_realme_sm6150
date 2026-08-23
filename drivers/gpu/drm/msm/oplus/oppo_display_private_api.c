@@ -2584,17 +2584,23 @@ int dsi_display_oppo_set_power(struct drm_connector *connector,
 		case OPPO_DISPLAY_NORMAL_HBM_SCENE:
 			extern void oppo_tp_aod_suspend_status(int status);
 			oppo_tp_aod_suspend_status(1);
-			rc = dsi_panel_set_lp1(display->panel);
-			rc = dsi_panel_set_lp2(display->panel);
 
 			/* Android 16: LP2 is the actual resting AOD state. The panel is put
 			 * to sleep by the LP2 command sequence, so we must explicitly wake
 			 * the display here so the AOD clock is visible.
+			 * FIX: Sending commands after LP2 crashes the DSI bus.
+			 * Instead, we just send AOD_ON and update the internal status
+			 * without putting the hardware to sleep (LP1/LP2).
 			 */
+			if (power_mode == SDE_MODE_DPMS_LP1)
+				set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE);
+			else
+				set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE_SUSPEND);
+			
 			dsi_display_cmd_engine_enable(display);
 			dsi_display_clk_ctrl(display->dsi_clk_handle, DSI_CORE_CLK | DSI_LINK_CLK, DSI_CLK_ON);
 			mutex_lock(&display->panel->panel_lock);
-			dsi_panel_tx_cmd_set(display->panel, DSI_CMD_POST_ON_BACKLIGHT);
+			dsi_panel_tx_cmd_set(display->panel, DSI_CMD_AOD_ON);
 			mutex_unlock(&display->panel->panel_lock);
 			dsi_display_clk_ctrl(display->dsi_clk_handle, DSI_CORE_CLK | DSI_LINK_CLK, DSI_CLK_OFF);
 			dsi_display_cmd_engine_disable(display);
@@ -2629,7 +2635,10 @@ int dsi_display_oppo_set_power(struct drm_connector *connector,
 		default:
 			break;
 		}
-		set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE_SUSPEND);
+		if (power_mode == SDE_MODE_DPMS_LP1)
+			set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE);
+		else
+			set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE_SUSPEND);
 		break;
 	case SDE_MODE_DPMS_ON:
 		blank = MSM_DRM_BLANK_UNBLANK;
