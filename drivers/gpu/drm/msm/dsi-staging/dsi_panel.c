@@ -4516,14 +4516,6 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 		       panel->name, rc);
 	set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE_SUSPEND);
 
-	/* Android 16: LP2 is the actual resting AOD state. The panel is put
-	 * to sleep by the LP2 command sequence, so we must explicitly wake
-	 * the display here so the AOD clock is visible.
-	 */
-	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_POST_ON_BACKLIGHT);
-	if (rc)
-		pr_err("[%s] failed to send DSI_CMD_POST_ON_BACKLIGHT in lp2, rc=%d\n",
-		       panel->name, rc);
 
 exit:
 	mutex_unlock(&panel->panel_lock);

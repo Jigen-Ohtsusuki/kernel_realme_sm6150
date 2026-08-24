@@ -2586,6 +2586,19 @@ int dsi_display_oppo_set_power(struct drm_connector *connector,
 			oppo_tp_aod_suspend_status(1);
 			rc = dsi_panel_set_lp1(display->panel);
 			rc = dsi_panel_set_lp2(display->panel);
+
+			/* Android 16: LP2 is the actual resting AOD state. The panel is put
+			 * to sleep by the LP2 command sequence, so we must explicitly wake
+			 * the display here so the AOD clock is visible.
+			 */
+			dsi_display_cmd_engine_enable(display);
+			dsi_display_clk_ctrl(display->dsi_clk_handle, DSI_CORE_CLK | DSI_LINK_CLK, DSI_CLK_ON);
+			mutex_lock(&display->panel->panel_lock);
+			dsi_panel_tx_cmd_set(display->panel, DSI_CMD_POST_ON_BACKLIGHT);
+			mutex_unlock(&display->panel->panel_lock);
+			dsi_display_clk_ctrl(display->dsi_clk_handle, DSI_CORE_CLK | DSI_LINK_CLK, DSI_CLK_OFF);
+			dsi_display_cmd_engine_disable(display);
+
 			set_oppo_display_scene(OPPO_DISPLAY_AOD_SCENE);
 			break;
 		case OPPO_DISPLAY_AOD_HBM_SCENE:
