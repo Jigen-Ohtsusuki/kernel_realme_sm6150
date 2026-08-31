@@ -18,10 +18,22 @@
 #include <stdbool.h>
 #include <string.h>
 #include <err.h>
+#include <openssl/opensslv.h>
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
-#include <openssl/engine.h>
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+# define USE_PKCS11_PROVIDER
+# include <openssl/provider.h>
+# include <openssl/store.h>
+# include <openssl/ui.h>
+#else
+# if !defined(OPENSSL_NO_ENGINE) && !defined(OPENSSL_NO_DEPRECATED_3_0)
+#  define USE_PKCS11_ENGINE
+#  include <openssl/engine.h>
+# endif
+#endif
 
 /*
  * OpenSSL 3.0 deprecates the OpenSSL's ENGINE API.
@@ -119,6 +131,34 @@ int main(int argc, char **argv)
 		fclose(f);
 		exit(0);
 	} else if (!strncmp(cert_src, "pkcs11:", 7)) {
+#if defined(USE_PKCS11_PROVIDER)
+		OSSL_STORE_CTX *store;
+		UI_METHOD *ui_method = NULL;
+		X509 *cert = NULL;
+
+		if (!OSSL_PROVIDER_try_load(NULL, "pkcs11", true))
+			ERR(1, "OSSL_PROVIDER_try_load(pkcs11)");
+		if (!OSSL_PROVIDER_try_load(NULL, "default", true))
+			ERR(1, "OSSL_PROVIDER_try_load(default)");
+
+		if (key_pass)
+			ui_method = UI_UTIL_wrap_read_pem_callback(NULL, 0);
+		store = OSSL_STORE_open(cert_src, ui_method, NULL, NULL, NULL);
+		ERR(!store, "%s", cert_src);
+
+		while (!cert && !OSSL_STORE_eof(store)) {
+			OSSL_STORE_INFO *info = OSSL_STORE_load(store);
+
+			if (!info)
+				continue;
+			if (OSSL_STORE_INFO_get_type(info) == OSSL_STORE_INFO_CERT)
+				cert = X509_dup(OSSL_STORE_INFO_get0_CERT(info));
+			OSSL_STORE_INFO_free(info);
+		}
+		OSSL_STORE_close(store);
+		ERR(!cert, "Get X.509 from PKCS#11");
+		write_cert(cert);
+#elif defined(USE_PKCS11_ENGINE)
 		ENGINE *e;
 		struct {
 			const char *cert_id;
@@ -141,6 +181,10 @@ int main(int argc, char **argv)
 		ENGINE_ctrl_cmd(e, "LOAD_CERT_CTRL", 0, &parms, NULL, 1);
 		ERR(!parms.cert, "Get X.509 from PKCS#11");
 		write_cert(parms.cert);
+#else
+		ERR(1, "PKCS#11 support (%s) not available in this OpenSSL build",
+		    cert_src);
+#endif
 	} else {
 		BIO *b;
 		X509 *x509;

@@ -27,7 +27,18 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
-#include <openssl/engine.h>
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+# define USE_PKCS11_PROVIDER
+# include <openssl/provider.h>
+# include <openssl/store.h>
+# include <openssl/ui.h>
+#else
+# if !defined(OPENSSL_NO_ENGINE) && !defined(OPENSSL_NO_DEPRECATED_3_0)
+#  define USE_PKCS11_ENGINE
+#  include <openssl/engine.h>
+# endif
+#endif
 
 /*
  * OpenSSL 3.0 deprecates the OpenSSL's ENGINE API.
@@ -141,9 +152,36 @@ static int pem_pw_cb(char *buf, int len, int w, void *v)
 
 static EVP_PKEY *read_private_key(const char *private_key_name)
 {
-	EVP_PKEY *private_key;
+	EVP_PKEY *private_key = NULL;
 
 	if (!strncmp(private_key_name, "pkcs11:", 7)) {
+#if defined(USE_PKCS11_PROVIDER)
+		OSSL_STORE_CTX *store;
+		UI_METHOD *ui_method = NULL;
+
+		if (!OSSL_PROVIDER_try_load(NULL, "pkcs11", true))
+			ERR(1, "OSSL_PROVIDER_try_load(pkcs11)");
+		if (!OSSL_PROVIDER_try_load(NULL, "default", true))
+			ERR(1, "OSSL_PROVIDER_try_load(default)");
+
+		if (key_pass)
+			ui_method = UI_UTIL_wrap_read_pem_callback(pem_pw_cb, 0);
+		store = OSSL_STORE_open(private_key_name, ui_method, NULL,
+					 NULL, NULL);
+		ERR(!store, "%s", private_key_name);
+
+		while (!private_key && !OSSL_STORE_eof(store)) {
+			OSSL_STORE_INFO *info = OSSL_STORE_load(store);
+
+			if (!info)
+				continue;
+			if (OSSL_STORE_INFO_get_type(info) == OSSL_STORE_INFO_PKEY)
+				private_key = OSSL_STORE_INFO_get1_PKEY(info);
+			OSSL_STORE_INFO_free(info);
+		}
+		OSSL_STORE_close(store);
+		ERR(!private_key, "%s", private_key_name);
+#elif defined(USE_PKCS11_ENGINE)
 		ENGINE *e;
 
 		ENGINE_load_builtin_engines();
@@ -160,6 +198,10 @@ static EVP_PKEY *read_private_key(const char *private_key_name)
 		private_key = ENGINE_load_private_key(e, private_key_name,
 						      NULL, NULL);
 		ERR(!private_key, "%s", private_key_name);
+#else
+		ERR(1, "PKCS#11 support (%s) not available in this OpenSSL build",
+		    private_key_name);
+#endif
 	} else {
 		BIO *b;
 
