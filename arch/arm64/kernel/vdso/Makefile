@@ -21,6 +21,15 @@ ccflags-y := -fno-stack-protector
 ccflags-y += -DDISABLE_BRANCH_PROFILING -ffixed-x18
 ccflags-y += $(DISABLE_LTO)
 
+# Ensure the VDSO objects are actually compiled for the target
+# architecture. On some clang/kernel-version combinations these objects
+# do not reliably inherit --target from KBUILD_CFLAGS, which silently
+# leaves the compiler targeting the host instead of AArch64.
+ifeq ($(cc-name),clang)
+ccflags-y += --target=$(CLANG_TRIPLE)
+asflags-y += --target=$(CLANG_TRIPLE)
+endif
+
 # Force -O3 to avoid libgcc dependencies
 CFLAGS_REMOVE_vgettimeofday.o = -pg -Os
 CFLAGS_vgettimeofday.o = -O3 -fPIC
